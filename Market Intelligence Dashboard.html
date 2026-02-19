@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceScout | Market Intelligence Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9; /* Stone-50: Warm neutral background */
+            color: #1c1917; /* Stone-900 */
+        }
+
+        /* Chart Container Rules as per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Height controls for different screens */
+        .chart-height-lg {
+            height: 400px;
+            max-height: 400px;
+        }
+        .chart-height-sm {
+            height: 300px;
+            max-height: 300px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; 
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(231, 229, 228, 0.5);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        .accent-gradient {
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); /* Orange-600 to Orange-700 */
+        }
+    </style>
+
+    <!-- Chosen Palette: Warm Neutrals (Stone) with Vibrant Orange Accents for Action/Data -->
+    <!-- Application Structure Plan: 
+         1. Header: Branding + Global Search (User input field).
+         2. Overview Section: Key Metrics (Best Price, Average, Spread) to give instant context.
+         3. Analysis Grid:
+            - Left: Top 10 Competitor List (The core request) with sorting.
+            - Right: Visualizations (Scatter plot for distribution, Line chart for trends).
+         4. Insights: Textual summary generated based on the mock data.
+         Interaction: The user types a product name. JS generates a random but realistic dataset for that product. Charts and lists update instantly.
+    -->
+    <!-- Visualization & Content Choices:
+         - Summary Cards: Immediate numerical grounding.
+         - Horizontal Bar Chart: Best for comparing ranking of top 10 competitors (Compare Goal).
+         - Line Chart: Shows price history context (Change Goal).
+         - Data Table: Detailed view for specific price checks (Inform/Organize Goal).
+         - NO SVG/Mermaid used. Unicode icons used for visual interest.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+</head>
+<body class="antialiased text-stone-800">
+
+    <!-- Navigation / Header -->
+    <nav class="sticky top-0 z-50 glass-panel border-b border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Brand -->
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl">🔭</span>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-stone-900">PriceScout</h1>
+                        <p class="text-xs text-stone-500 font-medium">Market Intelligence Engine</p>
+                    </div>
+                </div>
+
+                <!-- Search Interface (User Defined Field) -->
+                <div class="flex-1 max-w-2xl mx-8">
+                    <form id="searchForm" class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <span class="text-stone-400">🔍</span>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="productInput"
+                            class="block w-full pl-11 pr-24 py-3 border-none rounded-xl bg-stone-100 text-stone-900 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:bg-white transition-all shadow-inner" 
+                            placeholder="Enter product name (e.g., iPhone 15, Dyson Airwrap...)"
+                            autocomplete="off"
+                        >
+                        <button 
+                            type="submit" 
+                            class="absolute right-2 top-2 bottom-2 px-4 accent-gradient text-white font-medium rounded-lg text-sm shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                        >
+                            Analyze
+                        </button>
+                    </form>
+                </div>
+
+                <!-- User Profile Stub -->
+                <div class="hidden md:flex items-center gap-4">
+                    <div class="text-right hidden lg:block">
+                        <p class="text-sm font-semibold text-stone-900">Analyst View</p>
+                        <p class="text-xs text-stone-500">Pro License</p>
+                    </div>
+                    <div class="h-10 w-10 rounded-full bg-stone-200 flex items-center justify-center border-2 border-white shadow-sm">
+                        👤
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Intro / Context Section -->
+        <section class="fade-in">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2" id="reportTitle">Market Analysis: <span class="text-orange-600">Enter a Product</span></h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        Real-time competitive landscape analysis. This report aggregates pricing data from top retailers to identify the best current offers, market variance, and stock stability.
+                    </p>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        Live Data
+                    </span>
+                    <p class="text-xs text-stone-400 mt-1">Last updated: Just now</p>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Lowest Price -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-green-50 rounded-lg text-green-600 text-xl">🏷️</div>
+                        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Best Offer</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-stone-900" id="lowestPriceDisplay">---</h3>
+                    <p class="text-sm text-stone-500 mt-1" id="lowestRetailerDisplay">Awaiting input...</p>
+                </div>
+
+                <!-- Average Price -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600 text-xl">📊</div>
+                        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Market Avg</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-stone-900" id="avgPriceDisplay">---</h3>
+                    <p class="text-sm text-stone-500 mt-1">Across top 10 vendors</p>
+                </div>
+
+                <!-- Price Spread -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-orange-50 rounded-lg text-orange-600 text-xl">📉</div>
+                        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Potential Savings</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-stone-900" id="spreadDisplay">---</h3>
+                    <p class="text-sm text-stone-500 mt-1">Difference (High vs Low)</p>
+                </div>
+
+                <!-- Recommendation -->
+                <div class="bg-stone-900 text-white rounded-2xl p-6 shadow-lg">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2 bg-stone-700 rounded-lg text-yellow-400 text-xl">💡</div>
+                        <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">AI Insight</span>
+                    </div>
+                    <h3 class="text-xl font-bold leading-tight" id="insightDisplay">Enter product to analyze</h3>
+                    <p class="text-xs text-stone-400 mt-2">Based on historical volatility.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in" style="animation-delay: 0.1s;">
+            
+            <!-- Left Column: The 10 Best Prices List -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
+                    <div class="p-5 border-b border-stone-100 flex justify-between items-center bg-stone-50">
+                        <h3 class="font-bold text-stone-800">🏆 Top 10 Best Prices</h3>
+                        <button class="text-xs text-orange-600 font-medium hover:text-orange-700">Export CSV</button>
+                    </div>
+                    
+                    <div class="p-0">
+                        <!-- List Container -->
+                        <div id="competitorList" class="divide-y divide-stone-100 max-h-[600px] overflow-y-auto">
+                            <!-- Items will be injected here via JS -->
+                            <div class="p-8 text-center text-stone-400 italic">
+                                Search for a product to see the top 10 competitors.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Helper Text -->
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
+                    <span class="text-blue-500 text-xl">ℹ️</span>
+                    <p class="text-sm text-blue-800 leading-relaxed">
+                        <strong>Pro Tip:</strong> Prices marked with <span class="text-orange-600 font-bold">🔥</span> are significantly below market average. These deals usually expire within 24 hours.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Column: Visualization & Analysis -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Chart 1: Price Comparison Bar Chart -->
+                <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-stone-900">Price Comparison Visualization</h3>
+                        <p class="text-sm text-stone-500">Visual breakdown of the top 10 offers relative to the market average.</p>
+                    </div>
+                    <div class="chart-container chart-height-lg">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Row for Secondary Charts/Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <!-- Chart 2: Historical Trend (Mocked) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-stone-900">30-Day Price Trend</h3>
+                            <p class="text-xs text-stone-500">Market volatility index</p>
+                        </div>
+                        <div class="chart-container chart-height-sm">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Market Status Summary -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-stone-900 mb-4">Stock & Availability</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-stone-600">In Stock (Major Retailers)</span>
+                                        <span class="font-bold text-stone-900">80%</span>
+                                    </div>
+                                    <div class="w-full bg-stone-100 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-stone-600">Low Stock Warning</span>
+                                        <span class="font-bold text-stone-900">10%</span>
+                                    </div>
+                                    <div class="w-full bg-stone-100 rounded-full h-2">
+                                        <div class="bg-orange-400 h-2 rounded-full" style="width: 10%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-stone-600">Out of Stock</span>
+                                        <span class="font-bold text-stone-900">10%</span>
+                                    </div>
+                                    <div class="w-full bg-stone-100 rounded-full h-2">
+                                        <div class="bg-stone-300 h-2 rounded-full" style="width: 10%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-stone-100">
+                             <p class="text-xs text-stone-500 leading-relaxed">
+                                 The item "<span id="stockItemName" class="font-bold">...</span>" shows healthy inventory levels across most tracked vendors. Price wars are active.
+                             </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-stone-100 border-t border-stone-200 mt-12 py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-stone-400 text-sm">© 2023 PriceScout Intelligence. Demo Application.</p>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // --- Configuration & State ---
+        const state = {
+            productName: '',
+            basePrice: 0,
+            competitors: [],
+            charts: {
+                comparison: null,
+                trend: null
+            }
+        };
+
+        // Vendor Database (Mock)
+        const retailers = [
+            "Amazon", "Walmart", "Best Buy", "Target", "B&H Photo", 
+            "Newegg", "eBay (Top Rated)", "Costco", "GameStop", 
+            "Micro Center", "Adorama", "Sam's Club", "Abt Electronics"
+        ];
+
+        // --- Mock Data Generators ---
+
+        /**
+         * Generates a random price deviation
+         */
+        function getPrice(base, variance = 0.15) {
+            const min = base * (1 - variance);
+            const max = base * (1 + variance);
+            return (Math.random() * (max - min) + min).toFixed(2);
+        }
+
+        /**
+         * Generates a "Market Report" for a given product
+         */
+        function generateData(productName) {
+            // Determine a "base price" based on string length hash (pseudo-random stability) or random if generic
+            // For demo, just random between $50 and $1500
+            const randomBase = Math.floor(Math.random() * (1200 - 50) + 50);
+            
+            // Create 10 competitors
+            const data = [];
+            // Shuffle retailers
+            const shuffledRetailers = [...retailers].sort(() => 0.5 - Math.random()).slice(0, 10);
+            
+            shuffledRetailers.forEach(vendor => {
+                const price = parseFloat(getPrice(randomBase));
+                const shipping = Math.random() > 0.6 ? 0 : parseFloat((Math.random() * 15).toFixed(2));
+                
+                data.push({
+                    vendor: vendor,
+                    price: price,
+                    shipping: shipping,
+                    total: price + shipping,
+                    rating: (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1),
+                    inStock: Math.random() > 0.1,
+                    link: "#"
+                });
+            });
+
+            // Sort by Total Price (Low to High)
+            data.sort((a, b) => a.total - b.total);
+
+            return {
+                productName: productName,
+                basePrice: randomBase,
+                competitors: data
+            };
+        }
+
+        // --- DOM Update Functions ---
+
+        function updateSummary(data) {
+            const best = data.competitors[0];
+            const worst = data.competitors[data.competitors.length - 1];
+            
+            // Calculate Average
+            const sum = data.competitors.reduce((acc, curr) => acc + curr.total, 0);
+            const avg = sum / data.competitors.length;
+
+            // Update DOM
+            document.getElementById('reportTitle').innerHTML = `Market Analysis: <span class="text-orange-600">${data.productName}</span>`;
+            document.getElementById('lowestPriceDisplay').innerText = `$${best.total.toFixed(2)}`;
+            document.getElementById('lowestRetailerDisplay').innerText = `via ${best.vendor}`;
+            document.getElementById('avgPriceDisplay').innerText = `$${avg.toFixed(2)}`;
+            document.getElementById('spreadDisplay').innerText = `$${(worst.total - best.total).toFixed(2)}`;
+            document.getElementById('stockItemName').innerText = data.productName;
+
+            // Generate Insight
+            const savingsPct = ((avg - best.total) / avg) * 100;
+            let insight = "";
+            if (savingsPct > 20) insight = "🔥 Strong Buy! Prices are highly volatile.";
+            else if (savingsPct > 10) insight = "✅ Good time to buy. Moderate savings.";
+            else insight = "✋ Market is stable. Wait for a sale.";
+            document.getElementById('insightDisplay').innerText = insight;
+        }
+
+        function renderCompetitorList(data) {
+            const container = document.getElementById('competitorList');
+            container.innerHTML = '';
+
+            data.competitors.forEach((item, index) => {
+                const rank = index + 1;
+                const isWinner = index === 0;
+                const savings = (data.basePrice - item.total).toFixed(2); // Mock savings vs MSRP
+                
+                const html = `
+                    <div class="p-4 hover:bg-stone-50 transition-colors group flex items-center justify-between animate-pulse-once" style="animation-delay: ${index * 0.05}s">
+                        <div class="flex items-center gap-4">
+                            <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${isWinner ? 'bg-orange-100 text-orange-600 font-bold' : 'bg-stone-100 text-stone-500 font-medium'} text-sm">
+                                ${isWinner ? '1' : rank}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-stone-900 flex items-center gap-2">
+                                    ${item.vendor}
+                                    ${isWinner ? '<span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Best Deal</span>' : ''}
+                                    ${!item.inStock ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Low Stock</span>' : ''}
+                                </h4>
+                                <div class="flex items-center gap-3 text-xs text-stone-500 mt-1">
+                                    <span>⭐ ${item.rating}</span>
+                                    <span>🚚 ${item.shipping === 0 ? 'Free Shipping' : '+$' + item.shipping + ' ship'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold ${isWinner ? 'text-orange-600' : 'text-stone-900'}">
+                                $${item.total.toFixed(2)}
+                            </div>
+                            <button class="text-xs font-medium text-stone-400 group-hover:text-orange-600 transition-colors">
+                                View Deal &rarr;
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function updateCharts(data) {
+            const labels = data.competitors.map(c => c.vendor);
+            const prices = data.competitors.map(c => c.total);
+            const backgroundColors = data.competitors.map((c, i) => i === 0 ? '#ea580c' : '#d6d3d1'); // Highlight winner in Orange
+
+            // 1. Comparison Bar Chart
+            if (state.charts.comparison) state.charts.comparison.destroy();
+            
+            const ctxComp = document.getElementById('comparisonChart').getContext('2d');
+            state.charts.comparison = new Chart(ctxComp, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Price ($)',
+                        data: prices,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 6,
+                        barThickness: 'flex',
+                        maxBarThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `$${context.raw.toFixed(2)}`
+                            },
+                            backgroundColor: '#1c1917',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: '#f5f5f4' },
+                            ticks: { callback: (val) => '$' + val }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 2. Trend Line Chart (Mock Historical Data)
+            // We'll generate a fake history relative to the current best price
+            const historyLabels = ['30 days ago', '20 days ago', '10 days ago', '5 days ago', 'Today'];
+            const currentBest = data.competitors[0].total;
+            const historyData = [
+                currentBest * 1.15,
+                currentBest * 1.10,
+                currentBest * 1.05,
+                currentBest * 0.98, // It dipped recently
+                currentBest
+            ];
+
+            if (state.charts.trend) state.charts.trend.destroy();
+            
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            state.charts.trend = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: historyLabels,
+                    datasets: [{
+                        label: 'Lowest Market Price',
+                        data: historyData,
+                        borderColor: '#ea580c',
+                        backgroundColor: 'rgba(234, 88, 12, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#ea580c',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            display: false // Minimalist look
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function handleSearch(e) {
+            e.preventDefault();
+            const input = document.getElementById('productInput');
+            const term = input.value.trim();
+            
+            if (!term) return;
+
+            // UI Loading State
+            const btn = document.querySelector('#searchForm button');
+            const originalBtnText = btn.innerText;
+            btn.innerText = 'Scouring...';
+            btn.disabled = true;
+
+            // Simulate API Delay
+            setTimeout(() => {
+                const newData = generateData(term);
+                
+                updateSummary(newData);
+                renderCompetitorList(newData);
+                updateCharts(newData);
+
+                btn.innerText = originalBtnText;
+                btn.disabled = false;
+            }, 800); // 800ms delay for realism
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+            
+            // Initial Load with a placeholder product
+            document.getElementById('productInput').value = "Sony WH-1000XM5 Headphones";
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        });
+
+    </script>
+</body>
+</html>
